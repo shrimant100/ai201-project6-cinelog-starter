@@ -128,4 +128,50 @@ git commit -m "fix: default watchlist visibility to private and sort by date_add
 5. No conflict markers (`<<<<<<<`) in any file.
 
 ## PR Description
-<!-- Written at the end - feature overview, design decisions, manual testing steps -->
+
+**What the feature does:**
+
+This PR adds a watchlist feature to CineLog so users can save films they plan to watch later. It introduces a `WatchlistEntry` model, `add_to_watchlist()` and `get_watchlist()` service functions, and two REST endpoints: `GET /watchlist/<user_id>` to view a user's watchlist and `POST /watchlist/<user_id>/add` to save a film. The PR also addresses all six maintainer review comments: function rename, duplicate prevention, missing test, visibility default, sort order, and UUID compatibility after rebasing onto `main`.
+
+**Design decisions:**
+
+1. **Visibility default (`public=False`):** New watchlist entries default to private. A watchlist reflects what someone *intends* to watch, not what they have already logged and chosen to share. Privacy-first avoids exposing viewing intent before the user opts in. The tradeoff is slightly more friction for friend discovery — users who want a public queue must toggle visibility explicitly (a future enhancement).
+
+2. **Sort order (`date_added` descending):** Watchlists return newest saves first, matching `get_collection()` behavior on the same platform. Recency is more useful for a fluid, frequently updated queue than alphabetical title order, which better suits large stable catalogs. Users who want A–Z lookup could use a future `?sort=title` parameter.
+
+**Manual testing steps:**
+
+1. **Setup**
+   ```bash
+   pip install -r requirements.txt
+   python app.py
+   ```
+   Server runs at `http://localhost:5000`.
+
+2. **Create test data** — Use existing endpoints or the SQLite DB to ensure you have a valid `user_id` (UUID) and `film_id` (UUID). Example: list films with `GET /films/` and note a film's `id`.
+
+3. **Add a film to the watchlist**
+   ```bash
+   curl -X POST http://localhost:5000/watchlist/<user_id>/add \
+     -H "Content-Type: application/json" \
+     -d "{\"film_id\": \"<valid-film-uuid>\"}"
+   ```
+   **Expected:** `201` with JSON containing `film_id`, `date_added`, and `"public": false`.
+
+4. **View the watchlist**
+   ```bash
+   curl http://localhost:5000/watchlist/<user_id>
+   ```
+   **Expected:** JSON array of films; most recently added film appears first.
+
+5. **Test duplicate prevention** — Repeat the same `POST` from step 3.
+   **Expected:** `409` with an error message (film already on watchlist).
+
+6. **Test nonexistent film** — `POST` with a fake UUID like `00000000-0000-0000-0000-000000000000`.
+   **Expected:** `404` with an error message (film not found).
+
+7. **Run automated tests**
+   ```bash
+   pytest tests/ -v
+   ```
+   **Expected:** 5 tests pass (4 collection + 1 watchlist).
