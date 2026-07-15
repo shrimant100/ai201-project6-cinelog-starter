@@ -100,8 +100,32 @@ If we wanted to support both, a `?sort=title` query parameter could offer alphab
 
 ## Comment 6 - Rebase
 **What conflicted:**
+
+`.gitignore` — add/add conflict during rebase. Both `main` and my `chore: add gitignore` commit added the same file. `main` included `.pytest_cache/`; my version did not.
+
+After rebase completed, `WatchlistEntry` was missing from `models.py` — the starter's bootstrap commit never modified `models.py`, so replaying onto UUID `main` left watchlist service/routes pointing at a model that did not exist. Watchlist code also still documented integer `film_id` in places.
+
 **How I resolved it:**
+
+```bash
+git add pr-response.md && git commit -m "docs: complete AI usage section in pr-response.md"
+git rebase origin/main
+# Resolved .gitignore: kept both .pytest_cache/ (from main) and .venv/ entries (from mine)
+git add .gitignore && git rebase --continue
+# Added WatchlistEntry to models.py with String(36) film_id FK (UUID)
+# Updated watchlist_service docstring and route to use UUID film_id
+git commit -m "fix: update WatchlistEntry film_id to UUID after main branch refactor"
+# Applied documented design decisions from Comments 4 and 5
+git commit -m "fix: default watchlist visibility to private and sort by date_added"
+```
+
 **How I verified no conflict remains:**
+
+1. `git status` — clean working tree after rebase and fix commits.
+2. `git log --oneline origin/main..HEAD` — linear history, no merge commits.
+3. Grep — `WatchlistEntry.film_id` is `String(36)`; no integer `film_id` in watchlist code.
+4. `pytest tests/ -v` — all tests pass.
+5. No conflict markers (`<<<<<<<`) in any file.
 
 ## PR Description
 <!-- Written at the end - feature overview, design decisions, manual testing steps -->
