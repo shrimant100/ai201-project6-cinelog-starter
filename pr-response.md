@@ -175,3 +175,9 @@ This PR adds a watchlist feature to CineLog so users can save films they plan to
    pytest tests/ -v
    ```
    **Expected:** 5 tests pass (4 collection + 1 watchlist).
+
+## Git Log
+
+Screenshot of `git log --oneline origin/main..HEAD` after M4 history cleanup — 10 conventional commits, no merge commits:
+
+![git log --oneline](git-log.png)
